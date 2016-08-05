@@ -1,3 +1,18 @@
+*.ini
+*.txt
+*.ttf
+*.user
+*.filters
+*.vcxproj
+*.sln
+*.db
+json.hpp
+stb_image.h
+img/
+data
+Debug/
+Release/
+.vs/
 # Compiled Object files
 *.slo
 *.lo
