@@ -1,5 +1,5 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 445;
+constexpr int BUILD_NUMBER = 446;
 
 /* Dependency: JSON for Modern C++
  * https://github.com/nlohmann/json
@@ -224,7 +224,7 @@ bool read_data()
 		j = future_j.get();
 		std::cout << "\bdone.\n";
 	}
-	catch (std::invalid_argument e) { std::cerr << "Corrupted data file.\n"; return false; }
+	catch (std::invalid_argument& e) { std::cerr << "Corrupted data file.\n"; return false; }
 	size_t r = 0;
 
 	std::cout << "Loading images ... ";
@@ -282,7 +282,7 @@ bool read_data()
 				else for (int i = 0; i<copies; i++) g_corp_cards.push_back(c);
 			}
 		}
-		catch (std::invalid_argument e)
+		catch (std::invalid_argument& e)
 		{
 			std::cerr << "Unkown card: " << x.dump(2) << "\n";
 		}
@@ -313,7 +313,6 @@ bool write_stats()
 {
 	std::ofstream fout("stats.txt");
 	if (!fout.good()) return false;
-	std::string in;
 	for (auto& x : g_stats)
 	{
 		fout << x.first << " " << x.second.first << " " << x.second.second << "\n";
@@ -342,7 +341,7 @@ bool read_packs()
 		else if (v != 0)
 		{
 			try { g_allowed_packs[PackFromString(s)] = v; }
-			catch (std::invalid_argument e) { std::cerr << "Unkown pack in packs.txt: " << s << "\n"; }
+			catch (std::invalid_argument& e) { std::cerr << "Unkown pack in packs.txt: " << s << "\n"; }
 		}
 	}
 	fin.close();
@@ -353,7 +352,6 @@ bool write_packs()
 {
 	std::ofstream fout("packs.txt");
 	if (!fout.good()) return false;
-	std::string in;
 	fout << "OPT_INFLUENCE " << opt_influence << "\nOPT_ALLOWDUPLICATES " << opt_allowDuplicates << "\nOPT_PLUSCARDS " << opt_plusCards << "\n";
 	for (auto& x : g_allowed_packs)
 	{
