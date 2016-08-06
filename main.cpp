@@ -224,7 +224,7 @@ bool read_data()
 		j = future_j.get();
 		std::cout << "\bdone.\n";
 	}
-	catch (std::invalid_argument& e) { std::cerr << "Corrupted data file.\n"; return false; }
+	catch (std::invalid_argument& e) { std::cerr << "Corrupted data file. " << e.what() << "\n"; return false; }
 	size_t r = 0;
 
 	std::cout << "Loading images ... ";
@@ -284,7 +284,7 @@ bool read_data()
 		}
 		catch (std::invalid_argument& e)
 		{
-			std::cerr << "Unkown card: " << x.dump(2) << "\n";
+			std::cerr << "Unkown card: " << x.dump(2) << "\n" << e.what() << "\n";
 		}
 	}
 	std::cout << "\bdone.\n";
@@ -341,7 +341,7 @@ bool read_packs()
 		else if (v != 0)
 		{
 			try { g_allowed_packs[PackFromString(s)] = v; }
-			catch (std::invalid_argument& e) { std::cerr << "Unkown pack in packs.txt: " << s << "\n"; }
+			catch (std::invalid_argument& e) { std::cerr << "Unkown pack in packs.txt: " << s << "\n" << e.what() << "\n"; }
 		}
 	}
 	fin.close();
@@ -536,7 +536,7 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 		else if (guiState == GuiState::SideSelect)
 		{
 			ImGui::Columns(2, 0, false);
-			for (int i = 0; i < 2; i++)
+			for (size_t i = 0; i < 2; i++)
 			{
 				ImGui::PushID(i);
 				if (ImGui::ImageButton((void*)g_side_tex[i], ImVec2(300, 418), ImVec2(0, 0), ImVec2(1, 1), 0))
@@ -582,7 +582,7 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 				}
 			}
 			ImGui::Columns(3, 0, false);
-			for (int i = 0; i < 3; i++)
+			for (size_t i = 0; i < 3; i++)
 			{
 				ImGui::PushID(i);
 				if (ImGui::ImageButton((void*)choices[i].texId, ImVec2(300, 418)))
@@ -597,7 +597,7 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 				ImGui::PopID();
 				ImGui::NextColumn();
 			}
-			for (int i = 0; i < 3; i++)
+			for (size_t i = 0; i < 3; i++)
 			{
 				ImGui::TextWrapped(str_choices[i].c_str());
 				ImGui::NextColumn();
@@ -657,7 +657,7 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 				}
 			}
 			ImGui::Columns(3, 0, false);
-			for (int i = 0; i < 3; i++)
+			for (size_t i = 0; i < 3; i++)
 			{
 				ImGui::PushID(i);
 				if (ImGui::ImageButton((void*)choices[i].texId, ImVec2(300, 418)))
@@ -678,12 +678,12 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 				ImGui::PopID();
 				ImGui::NextColumn();
 			}
-			for (int i = 0; i < 3; i++)
+			for (size_t i = 0; i < 3; i++)
 			{
 				ImGui::TextWrapped(str_choices[i].c_str());
 				ImGui::NextColumn();
 			}
-			for (int i = 0; i < 3; i++)
+			for (size_t i = 0; i < 3; i++)
 			{
 				std::string s = "";
 				if (choices[i].faction != deck.identity.faction)
@@ -694,7 +694,7 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 				ImGui::Text(s.c_str());
 				ImGui::NextColumn();
 			}
-			for (int i = 0; i < 3; i++)
+			for (size_t i = 0; i < 3; i++)
 			{
 				std::string s = "";
 				if (choices[i].agenda_points >= 0) s = "Agenda points: " + std::to_string(choices[i].agenda_points);
