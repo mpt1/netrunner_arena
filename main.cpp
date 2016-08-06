@@ -157,6 +157,7 @@ void setIdentity(Card identity, int& cards, int& influence, int& points)
 	if (identity.pack == Pack::CreationAndControl && identity.pack_number == 3) influence = 12;		/* identity.name == "NEXT Design: Guarding the Net" */
 	if (identity.pack == Pack::DataAndDestiny && identity.pack_number == 1) cards = 40;				/* identity.name == "SYNC: Everything, Everywhere" */
 	if (identity.pack == Pack::OrderAndChaos && identity.pack_number == 3) influence = 17;			/* identity.name == "Titan Transnational: Investing In Your Future" */
+	if (identity.pack == Pack::Seconds && identity.pack_number == 17) influence = 12;				/* identity.name == "NBN: Controlling the Message" */
 
 	if (identity.pack == Pack::CyberExodus && identity.pack_number == 46) cards = 40;				/* identity.name == "Chaos Theory: W\u00fcnderkind" */
 	if (identity.pack == Pack::HonorAndProfit && identity.pack_number == 28) influence = 10;		/* identity.name == "Iain Stirling: Retired Spook" */
