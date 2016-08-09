@@ -1,5 +1,5 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 447;
+constexpr int BUILD_NUMBER = 448;
 
 /* Dependency: JSON for Modern C++
  * https://github.com/nlohmann/json
@@ -53,6 +53,11 @@ public:
 	Pack pack;
 	int copies;
 	GLuint texId;
+
+	friend bool operator==(const Card& lhs, const Card& rhs)
+	{
+		return (lhs.pack == rhs.pack && lhs.pack_number == rhs.pack_number);
+	}
 };
 
 class Deck
@@ -123,9 +128,14 @@ Card draw_card(std::vector<Card>& deck, std::vector<std::function<bool(Card)>> r
 	return c;
 }
 
-int influenceCost(Card c, Faction id)
+int influenceCost(const Card& c, const Deck& d)
 {
-	if (c.faction == id) return 0;
+	if (c.faction == d.identity.faction) return 0;
+	if (d.identity.pack == Pack::CreationAndControl && d.identity.pack_number == 29) /* identity.name == "The Professor: Keeper of Knowledge" */
+	{
+		/* The first copy of each program in this deck does not count against your influence limit. */
+		if (c.type == "program" && std::find(d.cards.begin(), d.cards.end(), c) == d.cards.end()) return 0;
+	}
 	return c.influence;
 }
 
@@ -625,10 +635,10 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 			{
 				drawCards = false;
 				g_corp_cards.erase(std::remove_if(g_corp_cards.begin(), g_corp_cards.end(),
-					[deck](const Card& c) { return (influenceCost(c, deck.identity.faction) == -1); }),
+					[deck](const Card& c) { return (influenceCost(c, deck) == -1); }),
 					g_corp_cards.end());
 				g_runner_cards.erase(std::remove_if(g_runner_cards.begin(), g_runner_cards.end(),
-					[deck](const Card& c) { return (influenceCost(c, deck.identity.faction) == -1); }),
+					[deck](const Card& c) { return (influenceCost(c, deck) == -1); }),
 					g_runner_cards.end());
 				g_corp_cards.erase(std::remove_if(g_corp_cards.begin(), g_corp_cards.end(),
 					[points](const Card& c) { return (c.agenda_points != -1 && c.agenda_points > points); }),
@@ -637,7 +647,7 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 					[deck, influence](const Card& c) { return (deck.identity.faction != c.faction && (c.influence > influence)); }),
 					g_corp_cards.end());
 				if (opt_influence != OPT_NOINF) g_runner_cards.erase(std::remove_if(g_runner_cards.begin(), g_runner_cards.end(),
-					[deck, influence](const Card& c) { return (deck.identity.faction != c.faction && (c.influence > influence)); }),
+					[deck, influence](const Card& c) { return (influenceCost(c, deck) > influence); }),
 					g_runner_cards.end());
 
 				for (size_t i = 0; i < 3; i++)
@@ -645,8 +655,8 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 					std::vector<std::function<bool(Card)>> reqs;
 					if (!opt_allowDuplicates) reqs.push_back([&i, &choices](Card c) { for (size_t j = 0; j < i; j++) if (c.name == choices[j].name) return false; return true; });
 					if (i == 2 && opt_influence == OPT_DISALLOW3INF) reqs.push_back(
-						[&deck, &choices](Card c) { if (influenceCost(choices[0], deck.identity.faction) > 0 && influenceCost(choices[1], deck.identity.faction) > 0
-							&& influenceCost(c, deck.identity.faction) > 0) return false; return true; });
+						[&deck, &choices](Card c) { if (influenceCost(choices[0], deck) > 0 && influenceCost(choices[1], deck) > 0
+							&& influenceCost(c, deck) > 0) return false; return true; });
 					if (guiState == GuiState::CorpCardsSelect && points - 1 >= cards)
 					{
 						int need = (points - 1 + cards - 1) / cards;
@@ -665,7 +675,7 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 				{
 					statusLine = "";
 					drawCards = true;
-					if (choices[i].faction != deck.identity.faction && choices[i].influence != -1) influence -= choices[i].influence;
+					if (choices[i].faction != deck.identity.faction && choices[i].influence != -1) influence -= influenceCost(choices[i], deck);
 					if (choices[i].agenda_points != -1) points -= choices[i].agenda_points;
 					for (size_t j = 0; j < 3; j++) if (j != i) ((guiState == GuiState::CorpCardsSelect) ? g_corp_cards : g_runner_cards).push_back(choices[j]);
 					deck.cards.push_back(choices[i]);
@@ -690,7 +700,8 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 				if (choices[i].faction != deck.identity.faction)
 				{
 					s = toString(choices[i].faction);
-					if (choices[i].faction != Faction::Neutral) s += ", Influence: " + std::to_string(choices[i].influence);
+					int infl = influenceCost(choices[i], deck);
+					if (infl > 0) s += ", Influence: " + std::to_string(infl);
 				}
 				ImGui::Text(s.c_str());
 				ImGui::NextColumn();
