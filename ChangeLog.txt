@@ -1,5 +1,5 @@
 Build 448
-	* Added influence rules for 'The Proffessor'.
+	* Added influence rules for 'The Professor'.
 
 Build 447
 	* Inital open source release
