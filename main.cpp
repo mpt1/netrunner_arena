@@ -32,6 +32,7 @@ using json = nlohmann::json;
 #include <future>
 #include <algorithm>
 #include <cassert>
+#include <tuple>
 
 #include "enums.h"
 
@@ -75,9 +76,12 @@ enum class GuiState
 	RunnerFactionSelect,
 	CorpCardsSelect,
 	RunnerCardsSelect,
-	Summary
+	Summary,
+	Statistics
 };
 
+// Every card, independent of selected packs and quantity.
+std::vector<Card> g_cardList;
 // Available cards and ids, unavailable cards will be removed during drafting
 std::vector<Card> g_corp_ids;
 std::vector<Card> g_runner_ids;
@@ -292,6 +296,7 @@ bool read_data()
 				if (x["type_code"] == "identity" && copies > 0) g_corp_ids.push_back(c);
 				else for (int i = 0; i<copies; i++) g_corp_cards.push_back(c);
 			}
+			g_cardList.push_back(c);
 		}
 		catch (std::invalid_argument& e)
 		{
@@ -411,6 +416,12 @@ int main()
 
 	if (!read_stats()) std::cerr << "No stats.txt found. Creating new statistics file.\n";
 	if (!read_packs()) std::cerr << "No packs.txt found. Creating new options file.\n";
+
+	if(!read_data())
+	{
+		std::cerr << "No data file found, aborting.\n";
+		return 1;
+	}
 
 	Deck deck;
 	Card choices[3];
@@ -533,15 +544,98 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 
 			if (ImGui::Button("Start"))
 			{
-				guiState = GuiState::SideSelect;
-				if (!read_data())
-				{
-					std::cerr << "No data file found, aborting.\n";
-					return 1;
-				}
+				guiState = GuiState::SideSelect;				
 			}
-			ImGui::SameLine(200.f);
+			ImGui::SameLine();
+			if (ImGui::Button("Statistics")) 
+			{
+				guiState = GuiState::Statistics;
+			}
+			ImGui::SameLine();
 			if (ImGui::Button("Quit")) { break; }
+		}
+
+		else if (guiState == GuiState::Statistics)
+		{
+			static int sortByCol = 3;
+			static bool sortUp = false;
+			static bool newSort = true;
+
+			std::string sortChar = sortUp ? u8" \u25B2" : u8" \u25BC";
+			std::string columns[4] = { "Card", "Picked", "Offered", "Picked / Offered" };
+			columns[sortByCol] += sortChar;
+
+			if (newSort)
+			{
+				newSort = false;
+				std::vector<std::function<bool(const Card&, const Card&)>> sortFunc = { [](const Card& lhs, const Card& rhs) { return lhs.name < rhs.name; },
+				[](const Card& lhs, const Card& rhs) { return g_stats[static_cast<int>(lhs.pack) * 1000 + lhs.pack_number].first < g_stats[static_cast<int>(rhs.pack) * 1000 + rhs.pack_number].first; },
+					[](const Card& lhs, const Card& rhs) { return g_stats[static_cast<int>(lhs.pack) * 1000 + lhs.pack_number].second < g_stats[static_cast<int>(rhs.pack) * 1000 + rhs.pack_number].second; },
+					[](const Card& lhs, const Card& rhs) { 
+						double l, r;
+						if (g_stats[static_cast<int>(lhs.pack) * 1000 + lhs.pack_number].second == 0) l = 0.0;
+						else l = static_cast<double>(g_stats[static_cast<int>(lhs.pack) * 1000 + lhs.pack_number].first) / g_stats[static_cast<int>(lhs.pack) * 1000 + lhs.pack_number].second;
+						if (g_stats[static_cast<int>(rhs.pack) * 1000 + rhs.pack_number].second == 0) r = 0.0;
+						else r = static_cast<double>(g_stats[static_cast<int>(rhs.pack) * 1000 + rhs.pack_number].first) / g_stats[static_cast<int>(rhs.pack) * 1000 + rhs.pack_number].second;
+						return l < r;
+				} };
+				std::sort(g_cardList.begin(), g_cardList.end(), sortFunc[sortByCol]);
+				if(!sortUp) std::reverse(g_cardList.begin(), g_cardList.end());
+			}
+
+			ImGui::Columns(4, "Stats");
+			ImGui::Separator();
+			if(ImGui::Button(columns[0].c_str()))
+			{
+				if (sortByCol == 0) sortUp = !sortUp;
+				sortByCol = 0;
+				newSort = true;
+			}
+			ImGui::NextColumn();
+			if(ImGui::Button(columns[1].c_str()))
+			{
+				if (sortByCol == 1) sortUp = !sortUp;
+				sortByCol = 1;
+				newSort = true;
+			}
+			ImGui::NextColumn();
+			if(ImGui::Button(columns[2].c_str()))
+			{
+				if (sortByCol == 2) sortUp = !sortUp;
+				sortByCol = 2;
+				newSort = true;
+			}
+			ImGui::NextColumn();
+			if(ImGui::Button(columns[3].c_str()))
+			{
+				if (sortByCol == 3) sortUp = !sortUp;
+				sortByCol = 3;
+				newSort = true;
+			}
+			ImGui::NextColumn();
+			ImGui::Separator();
+			for (auto& c : g_cardList)
+			{
+				int i = static_cast<int>(c.pack) * 1000 + c.pack_number;
+				ImGui::Selectable(c.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::BeginTooltip();
+					ImGui::Image((void*)c.texId, ImVec2(300, 418));
+					ImGui::EndTooltip();
+				}
+				ImGui::NextColumn();
+				int picked = g_stats[i].first;
+				int offered = g_stats[i].second;
+				ImGui::Text("%d", picked); ImGui::NextColumn();
+				ImGui::Text("%d", offered); ImGui::NextColumn();
+				if(offered != 0) ImGui::Text("%3.2lf%%", 100.0 * static_cast<double>(picked)/offered);
+				else ImGui::Text("%3.2lf%%", 0.0);
+				ImGui::NextColumn();
+			}
+			ImGui::Columns(1);
+			ImGui::Separator();
+			if (ImGui::Button("Back")) { guiState = GuiState::Start; }
 		}
 
 		else if (guiState == GuiState::SideSelect)
