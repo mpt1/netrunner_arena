@@ -1,5 +1,5 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 448;
+constexpr int BUILD_NUMBER = 449;
 
 /* Dependency: JSON for Modern C++
  * https://github.com/nlohmann/json

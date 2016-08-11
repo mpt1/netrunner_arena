@@ -1,3 +1,6 @@
+Build 449
+	* Added statistics screen.
+
 Build 448
 	* Added influence rules for 'The Professor'.
 
