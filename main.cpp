@@ -1,5 +1,5 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 449;
+constexpr int BUILD_NUMBER = 450;
 
 /* Dependency: JSON for Modern C++
  * https://github.com/nlohmann/json
@@ -13,12 +13,12 @@ using json = nlohmann::json;
 #include <imgui.h>
 #include "imgui_impl_glfw.h"
 
- /* Dependency: GLFW is a free, Open Source, multi-platform library for OpenGL, OpenGL ES and Vulkan application development.
+/* Dependency: GLFW is a free, Open Source, multi-platform library for OpenGL, OpenGL ES and Vulkan application development.
  * http://www.glfw.org/
  */
 #include <GLFW/glfw3.h>
 
- /* Dependency: stb single-file public domain libraries for C/C++
+/* Dependency: stb single-file public domain libraries for C/C++
  * https://github.com/nothings/stb
  */
 #define STB_IMAGE_IMPLEMENTATION
@@ -776,6 +776,9 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 					// Erreta 3.1, limit AstroScript to one per deck.
 					if (choices[i].pack == Pack::Core && choices[i].pack_number == 81) g_corp_cards.erase(std::remove_if(g_corp_cards.begin(), g_corp_cards.end(),
 						[deck](const Card& c) { return c.pack == Pack::Core && c.pack_number == 81; }), g_corp_cards.end());
+					// Limit 1 Director Haas' Pet Project per deck.
+					if (choices[i].pack == Pack::CreationAndControl && choices[i].pack_number == 4) g_corp_cards.erase(std::remove_if(g_corp_cards.begin(), g_corp_cards.end(),
+						[deck](const Card& c) { return c.pack == Pack::CreationAndControl && c.pack_number == 4; }), g_corp_cards.end());
 					cards--;
 					g_stats[static_cast<int>(choices[i].pack) * 1000 + choices[i].pack_number].first++;
 					if (cards <= 0) guiState = GuiState::Summary;

@@ -1,3 +1,6 @@
+Build 450
+	* Limit 1 Director Haas' Pet Project per deck.
+
 Build 449
 	* Added statistics screen.
 
