@@ -1,6 +1,11 @@
 /* Android: Netrunner - Arena drafting */
 constexpr int BUILD_NUMBER = 450;
 
+/* Dependency: C++ Requests
+ * https://github.com/whoshuu/cpr
+ */
+#include <cpr/cpr.h>
+
 /* Dependency: JSON for Modern C++
  * https://github.com/nlohmann/json
  */
@@ -193,6 +198,19 @@ void setIdentity(Card identity, int& cards, int& influence, int& points)
 	points = 19 + 2 * ((cards - 40) / 5);
 }
 
+// download file from url
+bool download_data(const std::string& fileurl, const std::string& filename)
+{
+	auto request = cpr::Get(cpr::Url{fileurl});
+	if (request.status_code != 200) {
+		return false;
+	}
+	std::ofstream file;
+	file.open(filename);
+	file << request.text;
+	file.close();
+}
+
 // read json file (nrdb dump) from file "data"
 // loads images from "img" directory
 bool read_data()
@@ -215,8 +233,12 @@ bool read_data()
 	}
 
 	glGenTextures(g_max_cards, &g_texture[0]);
+
 	std::ifstream fin("data");
-	if (!fin.good()) return false;
+	if (!fin.good()) {
+		if(!download_data("https://netrunnerdb.com/api/cards/", "data")) return false;
+		fin.open("data");
+	}
 	std::string str;
 	fin.seekg(0, std::ios::end);
 	str.reserve(static_cast<size_t>(fin.tellg()));
@@ -264,10 +286,19 @@ bool read_data()
 
 			c.type = x["type_code"].get<std::string>();
 
-			std::string filename = x["imagesrc"].get<std::string>();
-			size_t delimit = filename.find_last_of('/');
-			if (delimit != std::string::npos) filename = filename.substr(delimit + 1);
+			std::string fileurl = x["imagesrc"].get<std::string>();
+			size_t delimit = fileurl.find_last_of('/');
+			std::string filename;
+			if (delimit != std::string::npos) filename = fileurl.substr(delimit + 1);
 			filename = "img/" + filename;
+
+			std::ifstream file(filename);
+			if (!file.good()) {
+				// Image not found. Download it
+				download_data(fileurl, filename);
+			}
+			file.close();
+
 			int sizeX, sizeY, bpp;
 			unsigned char* data = stbi_load(filename.c_str(), &sizeX, &sizeY, &bpp, 4);
 			c.texId = 0;
