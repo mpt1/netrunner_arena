@@ -1,3 +1,6 @@
+Build 452
+	* Included Noto fonts.
+
 Build 451
 	* Fixed having to restart for pack selection to work.
 	* Removed warning messages about draft cards.

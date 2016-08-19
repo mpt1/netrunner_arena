@@ -1,5 +1,5 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 451;
+constexpr int BUILD_NUMBER = 452;
 
 /* Dependency: JSON for Modern C++
  * https://github.com/nlohmann/json
@@ -400,29 +400,42 @@ int main()
 	ImGui_ImplGlfw_Init(window, true);
 	// Load Fonts
 	ImGuiIO& io = ImGui::GetIO();
-	static const ImWchar ranges[] =
+	static const ImWchar ranges_mono[] =
 	{
 		0x0001, 0x001F,
 		0x0020, 0x077F,
-		0x0780, 0x139F,
-		0x13A0, 0x1DBF,
+		0,
+	};
+	static const ImWchar ranges_sans[] =
+	{
 		0x1DC0, 0x257F,
 		0x2580, 0x2DFF,
 		0x2E00, 0x4DBF,
-		//0x4DC0, 0xFAFF,
 		0xFB00, 0xFFFF,
 		0,
 	};
-	// Dependency: Unicode font
-	// http://unifoundry.com/unifont.html
-	std::ifstream test_for_font("unifont.ttf");
-	if (!test_for_font.good())
+
+	// NotoMono does not support all enough characters. Use NotoSans as replacement.
+	const std::string fontfile_mono = "font/NotoMono-Regular.ttf";
+	const std::string fontfile_sans = "font/NotoSans-Regular.ttf";
+	std::ifstream mono_test(fontfile_mono);
+	std::ifstream sans_test(fontfile_sans);
+	if (!mono_test.good())
 	{
-		std::cerr << "Unicode font file 'unifont.ttf' is missing, aborting.";
+		std::cerr << "Unicode font file '" << fontfile_mono << "' is missing, aborting.";
 		return 1;
 	}
-	test_for_font.close();
-	io.Fonts->AddFontFromFileTTF("unifont.ttf", 18.0f, NULL, &ranges[0]);
+	else mono_test.close();
+	if (!sans_test.good())
+	{
+		std::cerr << "Unicode font file '" << fontfile_sans << "' is missing, aborting.";
+		return 1;
+	}
+	else sans_test.close();
+	ImFontConfig config;
+	config.MergeMode = true;
+	io.Fonts->AddFontFromFileTTF(fontfile_mono.c_str(), 18.0f, NULL, &ranges_mono[0]);
+	io.Fonts->AddFontFromFileTTF(fontfile_sans.c_str(), 18.0f, &config, &ranges_sans[0]);
 
 	if (!read_stats()) std::cerr << "No stats.txt found. Creating new statistics file.\n";
 	if (!read_packs()) std::cerr << "No packs.txt found. Creating new options file.\n";
