@@ -202,9 +202,7 @@ void setIdentity(Card identity, int& cards, int& influence, int& points)
 bool download_data(const std::string& fileurl, const std::string& filename)
 {
 	auto request = cpr::Get(cpr::Url{fileurl});
-	if (request.status_code != 200) {
-		return false;
-	}
+	if (request.status_code != 200) return false;
 	std::ofstream file;
 	file.open(filename);
 	file << request.text;
@@ -224,7 +222,8 @@ bool download_missing_images(const json& j)
 		filename = "img/" + filename;
 
 		std::ifstream file(filename);
-		if (!file.good()) {
+		if (!file.good())
+		{
 			// Image not found. Download it
 			if(!download_data(fileurl, filename)) return false;
 		}
@@ -259,8 +258,10 @@ bool read_data()
 	glGenTextures(g_max_cards, &g_texture[0]);
 
 	std::ifstream fin("data");
-	if (!fin.good()) {
-		if(!download_data("https://netrunnerdb.com/api/cards/", "data")) {
+	if (!fin.good())
+	{
+		if(!download_data("https://netrunnerdb.com/api/cards/", "data"))
+		{
 			std::cerr << "Cannot download data file." << '\n';
 			std::exit(1);
 		};
@@ -292,7 +293,8 @@ bool read_data()
 	size_t r = 0;
 
 	std::cout << "Loading images ... ";
-	if(!download_missing_images(j)) {
+	if(!download_missing_images(j))
+	{
 		std::cerr << "Cannot download missing images." << '\n';
 		std::exit(1);
 	}
