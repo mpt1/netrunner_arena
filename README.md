@@ -8,9 +8,8 @@ Build dependencies:
  * stb_image.h https://github.com/nothings/stb
 
 Data dependencies:
- * Unicode font http://unifoundry.com/unifont.html
  * Card data https://netrunnerdb.com/api/cards/
  * Card images https://netrunnerdb.com
  * Corp / Runner image
 
-The images have to be PNG files in the 'img' folder. The files names are in the netrunnerdb format.
+This project uses the Noto fonts under the SIL Open Font License.

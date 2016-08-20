@@ -1,5 +1,5 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 450;
+constexpr int BUILD_NUMBER = 452;
 
 /* Dependency: C++ Requests
  * https://github.com/whoshuu/cpr
@@ -214,7 +214,9 @@ bool download_data(const std::string& fileurl, const std::string& filename)
 // read json file (nrdb dump) from file "data"
 // loads images from "img" directory
 bool read_data()
-{
+{	
+	if(g_corp_ids.size() > 0) return true;
+
 	glGenTextures(2, &g_side_tex[0]);
 	std::string side_fn[2] = { "img/corp.png", "img/runner.png" };
 	for (size_t i = 0; i < 2; i++)
@@ -259,7 +261,7 @@ bool read_data()
 	try
 	{
 		j = future_j.get();
-		std::cout << "\bdone.\n";
+		std::cout << "\b done.\n";
 	}
 	catch (std::invalid_argument& e) { std::cerr << "Corrupted data file. " << e.what() << "\n"; return false; }
 	size_t r = 0;
@@ -331,10 +333,11 @@ bool read_data()
 		}
 		catch (std::invalid_argument& e)
 		{
-			std::cerr << "Unkown card: " << x.dump(2) << "\n" << e.what() << "\n";
+			// ignore draft cards
+			if(x["set_code"] != "draft") std::cerr << "Unkown card: " << x.dump(2) << "\n" << e.what() << "\n";
 		}
 	}
-	std::cout << "\bdone.\n";
+	std::cout << "\b done.\n";
 	return true;
 }
 
@@ -428,31 +431,45 @@ int main()
 	ImGui_ImplGlfw_Init(window, true);
 	// Load Fonts
 	ImGuiIO& io = ImGui::GetIO();
-	static const ImWchar ranges[] =
+	static const ImWchar ranges_mono[] =
 	{
 		0x0001, 0x001F,
 		0x0020, 0x077F,
-		0x0780, 0x139F,
-		0x13A0, 0x1DBF,
+		0,
+	};
+	static const ImWchar ranges_sans[] =
+	{
 		0x1DC0, 0x257F,
 		0x2580, 0x2DFF,
 		0x2E00, 0x4DBF,
-		//0x4DC0, 0xFAFF,
 		0xFB00, 0xFFFF,
 		0,
 	};
-	// Dependency: Unicode font
-	// http://unifoundry.com/unifont.html
-	io.Fonts->AddFontFromFileTTF("unifont.ttf", 18.0f, NULL, &ranges[0]);
+
+	// NotoMono does not support all enough characters. Use NotoSans as replacement.
+	const std::string fontfile_mono = "font/NotoMono-Regular.ttf";
+	const std::string fontfile_sans = "font/NotoSans-Regular.ttf";
+	std::ifstream mono_test(fontfile_mono);
+	std::ifstream sans_test(fontfile_sans);
+	if (!mono_test.good())
+	{
+		std::cerr << "Unicode font file '" << fontfile_mono << "' is missing, aborting.";
+		return 1;
+	}
+	else mono_test.close();
+	if (!sans_test.good())
+	{
+		std::cerr << "Unicode font file '" << fontfile_sans << "' is missing, aborting.";
+		return 1;
+	}
+	else sans_test.close();
+	ImFontConfig config;
+	config.MergeMode = true;
+	io.Fonts->AddFontFromFileTTF(fontfile_mono.c_str(), 18.0f, NULL, &ranges_mono[0]);
+	io.Fonts->AddFontFromFileTTF(fontfile_sans.c_str(), 18.0f, &config, &ranges_sans[0]);
 
 	if (!read_stats()) std::cerr << "No stats.txt found. Creating new statistics file.\n";
 	if (!read_packs()) std::cerr << "No packs.txt found. Creating new options file.\n";
-
-	if(!read_data())
-	{
-		std::cerr << "No data file found, aborting.\n";
-		return 1;
-	}
 
 	Deck deck;
 	Card choices[3];
@@ -575,11 +592,21 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 
 			if (ImGui::Button("Start"))
 			{
+				if (!read_data())
+				{
+					std::cerr << "No data file found, aborting.\n";
+					return 1;
+				}
 				guiState = GuiState::SideSelect;				
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Statistics")) 
 			{
+				if (!read_data())
+				{
+					std::cerr << "No data file found, aborting.\n";
+					return 1;
+				}
 				guiState = GuiState::Statistics;
 			}
 			ImGui::SameLine();
