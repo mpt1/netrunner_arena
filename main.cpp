@@ -209,12 +209,34 @@ bool download_data(const std::string& fileurl, const std::string& filename)
 	file.open(filename);
 	file << request.text;
 	file.close();
+
+	return true;
+}
+
+bool download_missing_images(const json& j)
+{
+	for (auto &card : j) {
+		std::string fileurl = card["imagesrc"].get<std::string>();
+		size_t delimit = fileurl.find_last_of('/');
+		std::string filename;
+		if (delimit != std::string::npos)
+			filename = fileurl.substr(delimit + 1);
+		filename = "img/" + filename;
+
+		std::ifstream file(filename);
+		if (!file.good()) {
+			// Image not found. Download it
+			if(!download_data(fileurl, filename)) return false;
+		}
+		file.close();
+	}
+	return true;
 }
 
 // read json file (nrdb dump) from file "data"
 // loads images from "img" directory
 bool read_data()
-{	
+{
 	if(g_corp_ids.size() > 0) return true;
 
 	glGenTextures(2, &g_side_tex[0]);
@@ -238,7 +260,10 @@ bool read_data()
 
 	std::ifstream fin("data");
 	if (!fin.good()) {
-		if(!download_data("https://netrunnerdb.com/api/cards/", "data")) return false;
+		if(!download_data("https://netrunnerdb.com/api/cards/", "data")) {
+			std::cerr << "Cannot download data file." << '\n';
+			std::exit(1);
+		};
 		fin.open("data");
 	}
 	std::string str;
@@ -267,6 +292,10 @@ bool read_data()
 	size_t r = 0;
 
 	std::cout << "Loading images ... ";
+	if(!download_missing_images(j)) {
+		std::cerr << "Cannot download missing images." << '\n';
+		std::exit(1);
+	}
 	for (auto x : j)
 	{
 		Card c;
@@ -293,13 +322,6 @@ bool read_data()
 			std::string filename;
 			if (delimit != std::string::npos) filename = fileurl.substr(delimit + 1);
 			filename = "img/" + filename;
-
-			std::ifstream file(filename);
-			if (!file.good()) {
-				// Image not found. Download it
-				download_data(fileurl, filename);
-			}
-			file.close();
 
 			int sizeX, sizeY, bpp;
 			unsigned char* data = stbi_load(filename.c_str(), &sizeX, &sizeY, &bpp, 4);
