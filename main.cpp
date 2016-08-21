@@ -40,6 +40,7 @@ using json = nlohmann::json;
 #include <tuple>
 
 #include "enums.h"
+#include "threadpool.h"
 
 std::default_random_engine g_rng;
 
@@ -213,6 +214,9 @@ bool download_data(const std::string& fileurl, const std::string& filename)
 
 bool download_missing_images(const json& j)
 {
+	auto num_threads = std::max(1u, std::thread::hardware_concurrency());
+	ThreadPool pool(num_threads);
+
 	for (auto &card : j) {
 		std::string fileurl = card["imagesrc"].get<std::string>();
 		size_t delimit = fileurl.find_last_of('/');
@@ -225,7 +229,10 @@ bool download_missing_images(const json& j)
 		if (!file.good())
 		{
 			// Image not found. Download it
-			if(!download_data(fileurl, filename)) return false;
+			pool.enque([fileurl, filename]()
+			{
+				download_data(fileurl, filename);
+			});
 		}
 		file.close();
 	}
