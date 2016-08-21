@@ -326,10 +326,9 @@ bool read_data()
 
 			c.type = x["type_code"].get<std::string>();
 
-			std::string fileurl = x["imagesrc"].get<std::string>();
-			size_t delimit = fileurl.find_last_of('/');
-			std::string filename;
-			if (delimit != std::string::npos) filename = fileurl.substr(delimit + 1);
+			std::string filename = x["imagesrc"].get<std::string>();
+			size_t delimit = filename.find_last_of('/');
+			if (delimit != std::string::npos) filename = filename.substr(delimit + 1);
 			filename = "img/" + filename;
 
 			int sizeX, sizeY, bpp;
