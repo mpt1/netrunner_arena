@@ -171,6 +171,8 @@ Faction FactionFromNRDBString(std::string in)
 	if (in == "nbn") return Faction::NBN;
 	if (in == "weyland-consortium") return Faction::Weyland;
 	if (in == "neutral") return Faction::Neutral;
+	if (in == "neutral-runner") return Faction::Neutral;
+	if (in == "neutral-corp") return Faction::Neutral;
 	if (in == "adam") return Faction::Adam;
 	if (in == "sunny-lebeau") return Faction::Sunny;
 	if (in == "apex") return Faction::Apex;
