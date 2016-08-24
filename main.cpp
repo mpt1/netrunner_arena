@@ -197,7 +197,7 @@ void setIdentity(Card identity, int& cards, int& influence, int& points)
 // loads images from "img" directory
 bool read_data()
 {	
-	if(g_corp_ids.size() > 0) return true;
+	if(g_cardList.size() > 0) return true;
 
 	glGenTextures(2, &g_side_tex[0]);
 	std::string side_fn[2] = { "img/corp.png", "img/runner.png" };
@@ -415,7 +415,7 @@ int main()
 		0,
 	};
 
-	// NotoMono does not support all enough characters. Use NotoSans as replacement.
+	// NotoMono does not support enough characters. Use NotoSans as replacement.
 	const std::string fontfile_mono = "font/NotoMono-Regular.ttf";
 	const std::string fontfile_sans = "font/NotoSans-Regular.ttf";
 	std::ifstream mono_test(fontfile_mono);
