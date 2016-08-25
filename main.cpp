@@ -1,5 +1,5 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 452;
+constexpr int BUILD_NUMBER = 453;
 
 /* Dependency: C++ Requests
  * https://github.com/whoshuu/cpr

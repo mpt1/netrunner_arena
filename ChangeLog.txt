@@ -1,3 +1,6 @@
+Build 453
+	* Data and Images are pulled from netrunnerdb if not found in the install directory.
+
 Build 452
 	* Included Noto fonts.
 
