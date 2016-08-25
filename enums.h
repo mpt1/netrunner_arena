@@ -54,7 +54,10 @@ enum class Pack
 	SalsetteIsland,
 	TheLiberatedMind,
 	FearTheMasses,
-	Seconds
+	Seconds,
+	BloodMoney,
+	Escalation,
+	Intervention
 };
 
 std::string toString(Faction f)
@@ -116,6 +119,9 @@ std::string toString(Pack p)
 		case Pack::TheLiberatedMind: return "TheLiberatedMind";
 		case Pack::FearTheMasses: return "FearTheMasses";
 		case Pack::Seconds: return "Seconds";
+		case Pack::BloodMoney: return "BloodMoney";
+		case Pack::Escalation: return "Escalation";
+		case Pack::Intervention: return "Intervention";
 		default: return "Unknown";
 	}
 }
@@ -158,6 +164,9 @@ Pack PackFromString(std::string s)
 	if (s == "TheLiberatedMind") return Pack::TheLiberatedMind;
 	if (s == "FearTheMasses") return Pack::FearTheMasses;
 	if (s == "Seconds") return Pack::Seconds;
+	if (s == "BloodMoney") return Pack::BloodMoney;
+	if (s == "Escalation") return Pack::Escalation;
+	if (s == "Intervention") return Pack::Intervention;
 	throw std::invalid_argument("Unkown Pack");
 }
 
@@ -170,7 +179,8 @@ Faction FactionFromNRDBString(std::string in)
 	if (in == "jinteki") return Faction::Jinteki;
 	if (in == "nbn") return Faction::NBN;
 	if (in == "weyland-consortium") return Faction::Weyland;
-	if (in == "neutral") return Faction::Neutral;
+	if (in == "neutral-runner") return Faction::Neutral;
+	if (in == "neutral-corp") return Faction::Neutral;
 	if (in == "adam") return Faction::Adam;
 	if (in == "sunny-lebeau") return Faction::Sunny;
 	if (in == "apex") return Faction::Apex;
@@ -215,6 +225,9 @@ Pack PackFromNRDBString(std::string in)
 	if (in == "tlm") return Pack::TheLiberatedMind;
 	if (in == "ftm") return Pack::FearTheMasses;
 	if (in == "23s") return Pack::Seconds;
+	if (in == "bm") return Pack::BloodMoney;
+	if (in == "es") return Pack::Escalation;
+	if (in == "in") return Pack::Intervention;
 	throw std::invalid_argument("Unkown Pack");
 }
 

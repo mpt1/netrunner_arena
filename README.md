@@ -6,10 +6,9 @@ Build dependencies:
  * IMGUI https://github.com/ocornut/imgui
  * GLFW http://www.glfw.org/
  * stb_image.h https://github.com/nothings/stb
+ * cpr http://whoshuu.github.io/cpr/
 
 Data dependencies:
- * Card data https://netrunnerdb.com/api/cards/
- * Card images https://netrunnerdb.com
  * Corp / Runner image
 
 This project uses the Noto fonts under the SIL Open Font License.
