@@ -1,6 +1,11 @@
 /* Android: Netrunner - Arena drafting */
 constexpr int BUILD_NUMBER = 452;
 
+/* Dependency: C++ Requests
+ * https://github.com/whoshuu/cpr
+ */
+#include <cpr/cpr.h>
+
 /* Dependency: JSON for Modern C++
  * https://github.com/nlohmann/json
  */
@@ -109,9 +114,9 @@ std::map<Pack, int> g_allowed_packs;
 
 // draw and remove a random card from the deck vector
 // reqs contains optional requierments 
-Card draw_card(std::vector<Card>& deck, std::vector<std::function<bool(Card)>> reqs = std::vector<std::function<bool(Card)>>())
+Card draw_card(std::vector<Card>& deck, const std::vector<std::function<bool(Card)>> reqs = std::vector<std::function<bool(Card)>>())
 {
-	// TODO: gracefully handling
+	// TODO: gracefull handling of empty decks
 	assert(deck.size() > 0 && "Can't draw from empty deck.");
 	size_t pos;
 
@@ -122,6 +127,7 @@ Card draw_card(std::vector<Card>& deck, std::vector<std::function<bool(Card)>> r
 		for (auto req : reqs) if (!req(deck[i])) { skip = true; break; }
 		if (!skip) req_deck.push_back(i);
 	}
+
 	assert(req_deck.size() > 0 && "Can't draw from filtered deck.");
 	std::uniform_int_distribution<size_t> distribution(0, req_deck.size() - 1);
 	pos = distribution(g_rng);
@@ -146,7 +152,7 @@ int influenceCost(const Card& c, const Deck& d)
 // get min deck size, available influence and corp points for a specific identity.
 // remove Jinteki cards when using "Custom Biotics"
 // TODO: read this information from nrdb json dump 
-void setIdentity(Card identity, int& cards, int& influence, int& points)
+void setIdentity(const Card identity, int& cards, int& influence, int& points)
 {
 	cards = 45;
 	influence = 15;
@@ -193,6 +199,53 @@ void setIdentity(Card identity, int& cards, int& influence, int& points)
 	points = 19 + 2 * ((cards - 40) / 5);
 }
 
+// download file from url
+bool download_data(const std::string& fileurl, const std::string& filename)
+{
+	std::cout << "Downloading missing file: " << filename << " ... ";
+	auto request = cpr::Get(cpr::Url{fileurl});
+	// CPR error, try again
+	if (request.status_code == 0) request = cpr::Get(cpr::Url{ fileurl });
+	
+	if (request.status_code != 200)
+	{
+		// failed to download data
+		std::cout << request.status_code << "\n";
+		return false;
+	}
+	std::cout << request.status_code << "\n";
+	std::ofstream file;
+	file.open(filename, std::ofstream::out | std::ofstream::binary);
+	file << request.text;
+	file.close();
+
+	return true;
+}
+
+bool download_missing_images(const json& j)
+{
+	std::string baseurl = j["imageUrlTemplate"].get<std::string>();
+	baseurl = baseurl.substr(0, baseurl.find_last_of('/')+1);	
+
+	for (auto& card : j["data"])
+	{				
+		std::string filename = card["code"].get<std::string>();
+		std::string fileurl = baseurl + filename + ".png";
+		filename = "img/" + filename + ".png";
+		
+		std::ifstream file(filename);
+		if (!file.good())
+		{
+			file.close();
+			// Image not found. Download it
+			download_data(fileurl, filename);
+		}
+		else file.close();		
+	}
+
+	return true;
+}
+
 // read json file (nrdb dump) from file "data"
 // loads images from "img" directory
 bool read_data()
@@ -207,7 +260,7 @@ bool read_data()
 		unsigned char* data = stbi_load(side_fn[i].c_str(), &sizeX, &sizeY, &bpp, 4);
 		if (data == 0)
 		{
-			std::cerr << "Could not find the picture for " << side_fn[i] << "\n";
+			std::cerr << "Could not find " << side_fn[i] << "\n";
 			continue;
 		}
 		glBindTexture(GL_TEXTURE_2D, g_side_tex[i]);
@@ -217,8 +270,17 @@ bool read_data()
 	}
 
 	glGenTextures(g_max_cards, &g_texture[0]);
+
 	std::ifstream fin("data");
-	if (!fin.good()) return false;
+	if (!fin.good())
+	{
+		if(!download_data("https://netrunnerdb.com/api/2.0/public/cards", "data"))
+		{
+			std::cerr << "Cannot download data file." << '\n';
+			std::exit(1);
+		};
+		fin.open("data");
+	}
 	std::string str;
 	fin.seekg(0, std::ios::end);
 	str.reserve(static_cast<size_t>(fin.tellg()));
@@ -245,20 +307,25 @@ bool read_data()
 	size_t r = 0;
 
 	std::cout << "Loading images ... ";
-	for (auto x : j)
+	if(!download_missing_images(j))
+	{
+		std::cerr << "Cannot download missing images." << '\n';
+		std::exit(1);
+	}
+	for (auto x : j["data"])
 	{
 		Card c;
 		try
 		{
-			if (x.count("agendapoints") > 0) c.agenda_points = x["agendapoints"].get<int>();
+			if (x.count("agenda_points") > 0) c.agenda_points = x["agenda_points"].get<int>();
 			else c.agenda_points = -1;
 			c.copies = x["quantity"].get<int>();
 			c.faction = FactionFromNRDBString(x["faction_code"].get<std::string>());
-			if (x.count("factioncost") > 0) c.influence = x["factioncost"].get<int>();
+			if (x.count("faction_cost") > 0) c.influence = x["faction_cost"].get<int>();
 			else c.influence = -1;
 			c.name = x["title"].get<std::string>();
-			c.pack = PackFromNRDBString(x["set_code"].get<std::string>());
-			c.pack_number = x["number"].get<int>();
+			c.pack = PackFromNRDBString(x["pack_code"].get<std::string>());
+			c.pack_number = x["position"].get<int>();
 
 			int copies = c.copies;
 			if (g_allowed_packs.count(c.pack) > 0) copies = std::min(3, copies * g_allowed_packs[c.pack]);
@@ -266,10 +333,9 @@ bool read_data()
 
 			c.type = x["type_code"].get<std::string>();
 
-			std::string filename = x["imagesrc"].get<std::string>();
-			size_t delimit = filename.find_last_of('/');
-			if (delimit != std::string::npos) filename = filename.substr(delimit + 1);
-			filename = "img/" + filename;
+			std::string filename = x["code"].get<std::string>();
+			filename = "img/" + filename + ".png";
+
 			int sizeX, sizeY, bpp;
 			unsigned char* data = stbi_load(filename.c_str(), &sizeX, &sizeY, &bpp, 4);
 			c.texId = 0;
@@ -303,7 +369,7 @@ bool read_data()
 		catch (std::invalid_argument& e)
 		{
 			// ignore draft cards
-			if(x["set_code"] != "draft") std::cerr << "Unkown card: " << x.dump(2) << "\n" << e.what() << "\n";
+			if(x["pack_code"] != "draft") std::cerr << "Unkown card: " << x.dump(2) << "\n" << e.what() << "\n";
 		}
 	}
 	std::cout << "\b done.\n";
