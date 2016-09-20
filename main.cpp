@@ -1,9 +1,5 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 454;
-
-//TODO: shipping script
-//TODO: AUTHORS file
-//TODO: Side graphics
+constexpr int BUILD_NUMBER = 455;
 
 /* Dependency: C++ Requests
  * https://github.com/whoshuu/cpr

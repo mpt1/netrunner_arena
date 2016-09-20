@@ -9,6 +9,6 @@ Build dependencies:
  * cpr http://whoshuu.github.io/cpr/
 
 Data dependencies:
- * Corp / Runner image
+ * Corp / Runner image (Placeholders provided. We are looking for CC0 art to replace them!)
 
 This project uses the Noto fonts under the SIL Open Font License.
