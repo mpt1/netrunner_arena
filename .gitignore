@@ -8,7 +8,7 @@
 *.db
 json.hpp
 stb_image.h
-img/
+*.png
 data
 Debug/
 Release/

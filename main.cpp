@@ -1,5 +1,9 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 453;
+constexpr int BUILD_NUMBER = 454;
+
+//TODO: shipping script
+//TODO: AUTHORS file
+//TODO: Side graphics
 
 /* Dependency: C++ Requests
  * https://github.com/whoshuu/cpr
@@ -59,6 +63,7 @@ public:
 	Pack pack;
 	int copies;
 	GLuint texId;
+	bool limitOnePerDeck;
 
 	friend bool operator==(const Card& lhs, const Card& rhs)
 	{
@@ -327,9 +332,12 @@ bool read_data()
 			c.pack = PackFromNRDBString(x["pack_code"].get<std::string>());
 			c.pack_number = x["position"].get<int>();
 
+			if (x["deck_limit"].get<int>() == 1) c.limitOnePerDeck = true;
+			else c.limitOnePerDeck = false;
+			
 			int copies = c.copies;
-			if (g_allowed_packs.count(c.pack) > 0) copies = std::min(3, copies * g_allowed_packs[c.pack]);
-			else continue;
+			if (g_allowed_packs.count(c.pack) > 0 && g_allowed_packs[c.pack] > 0 && c.pack == Pack::Core) copies = std::min(3, copies * g_allowed_packs[c.pack]);
+			if (g_allowed_packs.count(c.pack) == 0 || g_allowed_packs[c.pack] == 0) continue;
 
 			c.type = x["type_code"].get<std::string>();
 
@@ -866,12 +874,20 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 					if (choices[i].agenda_points != -1) points -= choices[i].agenda_points;
 					for (size_t j = 0; j < 3; j++) if (j != i) ((guiState == GuiState::CorpCardsSelect) ? g_corp_cards : g_runner_cards).push_back(choices[j]);
 					deck.cards.push_back(choices[i]);
-					// Erreta 3.1, limit AstroScript to one per deck.
+					if (choices[i].limitOnePerDeck)
+					{
+						if(guiState == GuiState::CorpCardsSelect) g_corp_cards.erase(std::remove_if(g_corp_cards.begin(), g_corp_cards.end(),
+							[deck, &choices, i](const Card& c) { return c == choices[i]; }), g_corp_cards.end());
+						else g_runner_cards.erase(std::remove_if(g_runner_cards.begin(), g_runner_cards.end(),
+							[deck, &choices, i](const Card& c) { return c == choices[i]; }), g_runner_cards.end());
+					}
+					/*// Erreta 3.1, limit AstroScript to one per deck.
 					if (choices[i].pack == Pack::Core && choices[i].pack_number == 81) g_corp_cards.erase(std::remove_if(g_corp_cards.begin(), g_corp_cards.end(),
 						[deck](const Card& c) { return c.pack == Pack::Core && c.pack_number == 81; }), g_corp_cards.end());
 					// Limit 1 Director Haas' Pet Project per deck.
 					if (choices[i].pack == Pack::CreationAndControl && choices[i].pack_number == 4) g_corp_cards.erase(std::remove_if(g_corp_cards.begin(), g_corp_cards.end(),
 						[deck](const Card& c) { return c.pack == Pack::CreationAndControl && c.pack_number == 4; }), g_corp_cards.end());
+					*/
 					cards--;
 					g_stats[static_cast<int>(choices[i].pack) * 1000 + choices[i].pack_number].first++;
 					if (cards <= 0) guiState = GuiState::Summary;
