@@ -1,5 +1,5 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 455;
+constexpr int BUILD_NUMBER = 456;
 
 /* Dependency: C++ Requests
  * https://github.com/whoshuu/cpr
@@ -115,10 +115,9 @@ std::map<Pack, int> g_allowed_packs;
 
 // draw and remove a random card from the deck vector
 // reqs contains optional requierments 
-Card draw_card(std::vector<Card>& deck, const std::vector<std::function<bool(Card)>> reqs = std::vector<std::function<bool(Card)>>())
+bool draw_card(std::vector<Card>& deck, Card& out, const std::vector<std::function<bool(Card)>> reqs = std::vector<std::function<bool(Card)>>())
 {
-	// TODO: gracefull handling of empty decks
-	assert(deck.size() > 0 && "Can't draw from empty deck.");
+	if (deck.size() == 0) return false;
 	size_t pos;
 
 	std::vector<size_t> req_deck;
@@ -129,14 +128,15 @@ Card draw_card(std::vector<Card>& deck, const std::vector<std::function<bool(Car
 		if (!skip) req_deck.push_back(i);
 	}
 
-	assert(req_deck.size() > 0 && "Can't draw from filtered deck.");
+	if(req_deck.size() == 0) return false;
+
 	std::uniform_int_distribution<size_t> distribution(0, req_deck.size() - 1);
 	pos = distribution(g_rng);
 	pos = req_deck.at(pos);
 
-	Card c = deck.at(pos);
+	out = deck.at(pos);
 	deck.erase(deck.begin() + pos);
-	return c;
+	return true;
 }
 
 int influenceCost(const Card& c, const Deck& d)
@@ -549,6 +549,7 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 )");
 			ImGui::Text("Build %d", BUILD_NUMBER);
 
+			static bool lowCardWarning = false;
 			if (ImGui::TreeNode("Packs"))
 			{
 				static int numCore = std::max(1, g_allowed_packs[Pack::Core]);
@@ -613,8 +614,7 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 				{
 					ImGui::Selectable("23 Seconds", (bool*)(&g_allowed_packs[Pack::Seconds]));
 					ImGui::TreePop();
-				}
-
+				}				
 				g_allowed_packs[Pack::Core] = numCore;
 				ImGui::TreePop();
 			}
@@ -630,13 +630,15 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 			}
 
 			if (ImGui::Button("Start"))
-			{
+			{		
 				if (!read_data())
 				{
 					std::cerr << "No data file found, aborting.\n";
 					return 1;
 				}
-				guiState = GuiState::SideSelect;				
+				int num_packs = std::count_if(g_allowed_packs.begin(), g_allowed_packs.end(), [](decltype(g_allowed_packs)::value_type p) {return p.second > 0; });
+				if (num_packs < 4) lowCardWarning = true;
+				else guiState = GuiState::SideSelect;
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Statistics")) 
@@ -650,6 +652,30 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Quit")) { break; }
+			if(lowCardWarning) ImGui::OpenPopup("Warning: Low number of packs");
+			if (ImGui::BeginPopupModal("Warning: Low number of packs", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				ImGui::Text("With less than four card packs it is likely that at some point not enough applicable cards are available.\nPlease select more data packs.\n");
+				ImGui::Separator();
+				if (ImGui::Button("Cancel", ImVec2(120, 0)))
+				{
+					ImGui::CloseCurrentPopup();					
+					lowCardWarning = false;
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Ignore", ImVec2(120, 0)))
+				{
+					ImGui::CloseCurrentPopup();
+					guiState = GuiState::SideSelect;
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Quit", ImVec2(120, 0)))
+				{
+					ImGui::CloseCurrentPopup();
+					break;
+				}
+				ImGui::EndPopup();
+			}
 		}
 
 		else if (guiState == GuiState::Statistics)
@@ -778,7 +804,7 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 				drawCards = false;
 				for (size_t i = 0; i < 3; i++)
 				{
-					choices[i] = draw_card((guiState == GuiState::CorpFactionSelect) ? g_corp_ids : g_runner_ids);
+					draw_card((guiState == GuiState::CorpFactionSelect) ? g_corp_ids : g_runner_ids, choices[i]);
 					str_choices[i] = choices[i].name;
 					g_stats[static_cast<int>(choices[i].pack) * 1000 + choices[i].pack_number].second++;
 				}
@@ -822,6 +848,7 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 		// cards
 		else if (guiState == GuiState::CorpCardsSelect || guiState == GuiState::RunnerCardsSelect)
 		{
+			static bool drawFailed = false;
 			if (drawCards)
 			{
 				drawCards = false;
@@ -853,7 +880,10 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 						int need = (points - 1 + cards - 1) / cards;
 						reqs.push_back([&need](Card c) { return c.agenda_points >= need; });
 					}
-					choices[i] = draw_card((guiState == GuiState::CorpCardsSelect) ? g_corp_cards : g_runner_cards, reqs);
+					if (!draw_card((guiState == GuiState::CorpCardsSelect) ? g_corp_cards : g_runner_cards, choices[i], reqs))
+					{
+						drawFailed = true;
+					}
 					str_choices[i] = choices[i].name;
 					g_stats[static_cast<int>(choices[i].pack) * 1000 + choices[i].pack_number].second++;
 				}
@@ -877,13 +907,6 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 						else g_runner_cards.erase(std::remove_if(g_runner_cards.begin(), g_runner_cards.end(),
 							[deck, &choices, i](const Card& c) { return c == choices[i]; }), g_runner_cards.end());
 					}
-					/*// Erreta 3.1, limit AstroScript to one per deck.
-					if (choices[i].pack == Pack::Core && choices[i].pack_number == 81) g_corp_cards.erase(std::remove_if(g_corp_cards.begin(), g_corp_cards.end(),
-						[deck](const Card& c) { return c.pack == Pack::Core && c.pack_number == 81; }), g_corp_cards.end());
-					// Limit 1 Director Haas' Pet Project per deck.
-					if (choices[i].pack == Pack::CreationAndControl && choices[i].pack_number == 4) g_corp_cards.erase(std::remove_if(g_corp_cards.begin(), g_corp_cards.end(),
-						[deck](const Card& c) { return c.pack == Pack::CreationAndControl && c.pack_number == 4; }), g_corp_cards.end());
-					*/
 					cards--;
 					g_stats[static_cast<int>(choices[i].pack) * 1000 + choices[i].pack_number].first++;
 					if (cards <= 0) guiState = GuiState::Summary;
@@ -918,6 +941,18 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 			ImGui::Columns(1);
 			if (guiState == GuiState::CorpCardsSelect) ImGui::Text("\n Cards left: %d     Influence left: %d     Agenda points left: %d", cards, influence, points);
 			else ImGui::Text("\n Cards left: %d     Influence left: %d", cards, influence);
+			if (drawFailed) ImGui::OpenPopup("Out of cards!");
+			if (ImGui::BeginPopupModal("Out of cards!", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				ImGui::Text("Not enough applicable cards.\nPlease select more data packs.\n");
+				ImGui::Separator();				
+				if (ImGui::Button("Quit", ImVec2(120, 0))) 
+				{
+					ImGui::CloseCurrentPopup(); 
+					break;
+				}
+				ImGui::EndPopup();
+			}
 		}
 
 		// end

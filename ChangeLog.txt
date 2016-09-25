@@ -1,3 +1,6 @@
+Build 456
+	* Friendly handling of empty card pools.
+
 Build 455
 	* Added placeholder graphics.
 	* Added 'Limit {1|6} per deck' rule.
