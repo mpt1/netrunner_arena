@@ -1,3 +1,6 @@
+Build 458
+	* Decoupled Pack selection from data parsing.
+
 Build 457
 	* Minor changes to file handling.
 

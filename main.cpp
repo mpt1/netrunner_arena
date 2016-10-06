@@ -1,5 +1,5 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 457;
+constexpr int BUILD_NUMBER = 458;
 
 /* Dependency: C++ Requests
  * https://github.com/whoshuu/cpr
@@ -55,6 +55,7 @@ public:
 	int agenda_points;
 	std::string name;
 	std::string type;
+	std::string side;
 	int pack_number;
 	Pack pack;
 	int copies;
@@ -251,8 +252,6 @@ bool download_missing_images(const json& j)
 // loads images from "img" directory
 bool read_data()
 {	
-	if(g_cardList.size() > 0) return true;
-
 	glGenTextures(2, &g_side_tex[0]);
 	std::string side_fn[2] = { "img/corp.png", "img/runner.png" };
 	for (size_t i = 0; i < 2; i++)
@@ -336,12 +335,9 @@ bool read_data()
 
 			if (x["deck_limit"].get<int>() == 1) c.limitOnePerDeck = true;
 			else c.limitOnePerDeck = false;
-			
-			int copies = c.copies;
-			if (g_allowed_packs.count(c.pack) > 0 && g_allowed_packs[c.pack] > 0 && c.pack == Pack::Core) copies = std::min(3, copies * g_allowed_packs[c.pack]);
-			if (g_allowed_packs.count(c.pack) == 0 || g_allowed_packs[c.pack] == 0) continue;
 
 			c.type = x["type_code"].get<std::string>();
+			c.side = x["side_code"].get<std::string>();
 
 			std::string filename = x["code"].get<std::string>();
 			filename = "img/" + filename + ".png";
@@ -363,17 +359,7 @@ bool read_data()
 				std::cout << "\b" << spinner[s];
 				s = (s + 1) % 4;
 			}
-
-			if (x["side_code"] == "runner")
-			{
-				if (x["type_code"] == "identity" && copies > 0) g_runner_ids.push_back(c);
-				else for (int i = 0; i<copies; i++) g_runner_cards.push_back(c);
-			}
-			else if (x["side_code"] == "corp")
-			{
-				if (x["type_code"] == "identity" && copies > 0) g_corp_ids.push_back(c);
-				else for (int i = 0; i<copies; i++) g_corp_cards.push_back(c);
-			}
+			
 			g_cardList.push_back(c);
 		}
 		catch (std::invalid_argument& e)
@@ -384,6 +370,31 @@ bool read_data()
 	}
 	std::cout << "\b done.\n";
 	return true;
+}
+
+void build_decks()
+{
+	g_runner_cards.clear();
+	g_runner_ids.clear();
+	g_corp_cards.clear();
+	g_corp_ids.clear();
+	for (auto c : g_cardList)
+	{
+		int copies = c.copies;
+		if (g_allowed_packs.count(c.pack) > 0 && g_allowed_packs[c.pack] > 0 && c.pack == Pack::Core) copies = std::min(3, copies * g_allowed_packs[c.pack]);
+		if (g_allowed_packs.count(c.pack) == 0 || g_allowed_packs[c.pack] == 0) continue;
+
+		if (c.side == "runner")
+		{
+			if (c.type == "identity" && copies > 0) g_runner_ids.push_back(c);
+			else for (int i = 0; i<copies; i++) g_runner_cards.push_back(c);
+		}
+		else if (c.side == "corp")
+		{
+			if (c.type == "identity" && copies > 0) g_corp_ids.push_back(c);
+			else for (int i = 0; i<copies; i++) g_corp_cards.push_back(c);
+		}
+	}
 }
 
 // read stats from file "stats.txt". format: card id, #picked, #offered
@@ -515,6 +526,11 @@ int main()
 
 	if (!read_stats()) std::cerr << "No stats.txt found. Creating new statistics file.\n";
 	if (!read_packs()) std::cerr << "No packs.txt found. Creating new options file.\n";
+	if (!read_data())
+	{
+		std::cerr << "No data file found, aborting.\n";
+		return 1;
+	}
 
 	Deck deck;
 	Card choices[3];
@@ -637,23 +653,15 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 
 			if (ImGui::Button("Start"))
 			{		
-				if (!read_data())
-				{
-					std::cerr << "No data file found, aborting.\n";
-					return 1;
-				}
+				build_decks();
 				int num_packs = std::count_if(g_allowed_packs.begin(), g_allowed_packs.end(), [](decltype(g_allowed_packs)::value_type p) {return p.second > 0; });
 				if (num_packs < 4) lowCardWarning = true;
 				else guiState = GuiState::SideSelect;
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Statistics")) 
-			{
-				if (!read_data())
-				{
-					std::cerr << "No data file found, aborting.\n";
-					return 1;
-				}
+			{				
+				build_decks();
 				guiState = GuiState::Statistics;
 			}
 			ImGui::SameLine();
