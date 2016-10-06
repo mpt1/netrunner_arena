@@ -1,5 +1,5 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 456;
+constexpr int BUILD_NUMBER = 457;
 
 /* Dependency: C++ Requests
  * https://github.com/whoshuu/cpr
@@ -277,10 +277,15 @@ bool read_data()
 	{
 		if(!download_data("https://netrunnerdb.com/api/2.0/public/cards", "data"))
 		{
-			std::cerr << "Cannot download data file." << '\n';
-			std::exit(1);
+			std::cerr << "Cannot open or download data file." << '\n';
+			return false;
 		};
 		fin.open("data");
+		if (!fin.good())
+		{
+			std::cerr << "Cannot open data file." << '\n';
+			return false;
+		}
 	}
 	std::string str;
 	fin.seekg(0, std::ios::end);
@@ -311,8 +316,9 @@ bool read_data()
 	if(!download_missing_images(j))
 	{
 		std::cerr << "Cannot download missing images." << '\n';
-		std::exit(1);
+		return false;
 	}
+
 	for (auto x : j["data"])
 	{
 		Card c;

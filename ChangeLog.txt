@@ -1,3 +1,6 @@
+Build 457
+	* Minor changes to file handling.
+
 Build 456
 	* Friendly handling of empty card pools.
 
