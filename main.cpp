@@ -1,5 +1,5 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 459;
+constexpr int BUILD_NUMBER = 460;
 
 /* Dependency: C++ Requests
  * https://github.com/whoshuu/cpr
@@ -484,7 +484,7 @@ int main()
 	// Setup window
 	glfwSetErrorCallback(error_callback);
 	if (!glfwInit()) return 1;
-	GLFWwindow* window = glfwCreateWindow(1351, 644, "Netrunner Arena", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(1351, 662, "Netrunner Arena", NULL, NULL);
 	glfwMakeContextCurrent(window);
 	// Setup ImGui binding
 	ImGui_ImplGlfw_Init(window, true);
@@ -542,6 +542,9 @@ int main()
 	int cards = 45;
 	int influence = 15;
 	int points = 21;
+	int totalCards = cards;
+	int totalInfluence = influence;
+	int totalPoints = points;
 
 	// Main loop
 	std::string statusLine;
@@ -552,7 +555,7 @@ int main()
 		glfwPollEvents();
 		ImGui_ImplGlfw_NewFrame();
 
-		ImGui::SetNextWindowSize(ImVec2(993, 644), ImGuiSetCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(993, 662), ImGuiSetCond_FirstUseEver);
 		ImGui::SetNextWindowPos(ImVec2(0, 0), 0);
 		ImGui::SetNextWindowCollapsed(false, 0);
 		ImGui::Begin("Netrunner Arena");
@@ -858,6 +861,9 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 				deck.identity = choices[distribution(g_rng)];
 				statusLine = "I picked '" + deck.identity.name + "' for you!";
 				setIdentity(deck.identity, cards, influence, points);
+				totalCards = cards;
+				totalInfluence = influence;
+				totalPoints = points;
 				g_stats[static_cast<int>(deck.identity.pack) * 1000 + deck.identity.pack_number].first++;
 			}
 			ImGui::PopID();
@@ -957,8 +963,25 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 				ImGui::NextColumn();
 			}
 			ImGui::Columns(1);
-			if (guiState == GuiState::CorpCardsSelect) ImGui::Text("\n Cards left: %d     Influence left: %d     Agenda points left: %d", cards, influence, points);
-			else ImGui::Text("\n Cards left: %d     Influence left: %d", cards, influence);
+			
+			ImGui::Text("\n");
+			ImGui::Text("Cards: "); 
+			float spacer = 150.f;
+			ImGui::SameLine(spacer);
+			std::string pb = std::to_string(totalCards - cards) + " / " + std::to_string(totalCards);
+			ImGui::ProgressBar(static_cast<float>(totalCards - cards) / totalCards, { 0,0 }, pb.c_str());
+			if (guiState == GuiState::CorpCardsSelect)
+			{
+				ImGui::Text("Agenda points: ");
+				ImGui::SameLine(spacer);
+				pb = std::to_string(totalPoints - points) + " / " + std::to_string(totalPoints);
+				ImGui::ProgressBar(static_cast<float>(totalPoints - points) / totalPoints, { 0,0 }, pb.c_str());
+			}
+			ImGui::Text("Influence: ");
+			ImGui::SameLine(spacer);
+			pb = std::to_string(influence) + " / " + std::to_string(totalInfluence);
+			ImGui::ProgressBar(static_cast<float>(influence) / totalInfluence, { 0,0 }, pb.c_str());			
+			
 			if (drawFailed) ImGui::OpenPopup("Out of cards!");
 			if (ImGui::BeginPopupModal("Out of cards!", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
@@ -1042,7 +1065,7 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 
 		if (guiState == GuiState::CorpCardsSelect || guiState == GuiState::RunnerCardsSelect)
 		{
-			ImGui::SetNextWindowSize(ImVec2(358, 644), ImGuiSetCond_FirstUseEver);
+			ImGui::SetNextWindowSize(ImVec2(358, 662), ImGuiSetCond_FirstUseEver);
 			ImGui::SetNextWindowPos(ImVec2(993, 0), 0);
 			ImGui::SetNextWindowCollapsed(false, 0);
 			ImGui::Begin("Deck");
