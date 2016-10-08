@@ -1,3 +1,7 @@
+Build 459
+	* Skip downloading images of unreleased packs.
+	* Added 'Blood Money' pack.
+
 Build 458
 	* Decoupled Pack selection from data parsing.
 

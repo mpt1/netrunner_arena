@@ -1,5 +1,5 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 458;
+constexpr int BUILD_NUMBER = 459;
 
 /* Dependency: C++ Requests
  * https://github.com/whoshuu/cpr
@@ -231,6 +231,9 @@ bool download_missing_images(const json& j)
 
 	for (auto& card : j["data"])
 	{				
+		// skip images of unknown packs
+		try { PackFromNRDBString(card["pack_code"].get<std::string>()); }
+		catch (std::invalid_argument&) { continue; }
 		std::string filename = card["code"].get<std::string>();
 		std::string fileurl = baseurl + filename + ".png";
 		filename = "img/" + filename + ".png";
@@ -362,10 +365,10 @@ bool read_data()
 			
 			g_cardList.push_back(c);
 		}
-		catch (std::invalid_argument& e)
+		catch (std::invalid_argument&)
 		{
 			// ignore draft cards
-			if(x["pack_code"] != "draft") std::cerr << "Unkown card: " << x.dump(2) << "\n" << e.what() << "\n";
+			//if(x["pack_code"] != "draft") std::cerr << "Unkown card: " << x.dump(2) << "\n" << e.what() << "\n";
 		}
 	}
 	std::cout << "\b done.\n";
@@ -635,6 +638,7 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 				if (ImGui::TreeNode("Flashpoint"))
 				{
 					ImGui::Selectable("23 Seconds", (bool*)(&g_allowed_packs[Pack::Seconds]));
+					ImGui::Selectable("Blood Money", (bool*)(&g_allowed_packs[Pack::BloodMoney]));
 					ImGui::TreePop();
 				}				
 				g_allowed_packs[Pack::Core] = numCore;

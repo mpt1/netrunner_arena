@@ -226,8 +226,8 @@ Pack PackFromNRDBString(std::string in)
 	if (in == "ftm") return Pack::FearTheMasses;
 	if (in == "23s") return Pack::Seconds;
 	if (in == "bm") return Pack::BloodMoney;
-	if (in == "es") return Pack::Escalation;
-	if (in == "in") return Pack::Intervention;
+	//if (in == "es") return Pack::Escalation;
+	//if (in == "in") return Pack::Intervention;
 	throw std::invalid_argument("Unkown Pack");
 }
 
