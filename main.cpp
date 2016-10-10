@@ -400,6 +400,12 @@ void build_decks()
 	}
 }
 
+void logDeck(std::ostream& fout, const Deck& deck)
+{
+	fout << "1 " << deck.identity.name << " (" << toString(deck.identity.pack) << ", " << deck.identity.pack_number << ")\n";
+	for (auto& c : deck.cards) fout << "1 " << c.name << " (" << toString(c.pack) << ", " << c.pack_number << ")\n";
+}
+
 // read stats from file "stats.txt". format: card id, #picked, #offered
 bool read_stats()
 {
@@ -841,6 +847,9 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 					drawCards = true;
 					deck.identity = choices[i];
 					setIdentity(deck.identity, cards, influence, points);
+					totalCards = cards;
+					totalInfluence = influence;
+					totalPoints = points;
 					g_stats[static_cast<int>(deck.identity.pack) * 1000 + deck.identity.pack_number].first++;
 				}
 				ImGui::PopID();
@@ -969,18 +978,24 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 			float spacer = 150.f;
 			ImGui::SameLine(spacer);
 			std::string pb = std::to_string(totalCards - cards) + " / " + std::to_string(totalCards);
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.26f,0.54f,0.64f,1.f));
 			ImGui::ProgressBar(static_cast<float>(totalCards - cards) / totalCards, { 0,0 }, pb.c_str());
+			ImGui::PopStyleColor();
 			if (guiState == GuiState::CorpCardsSelect)
 			{
 				ImGui::Text("Agenda points: ");
 				ImGui::SameLine(spacer);
 				pb = std::to_string(totalPoints - points) + " / " + std::to_string(totalPoints);
+				ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.36f, 0.64f, 0.74f, 1.f));
 				ImGui::ProgressBar(static_cast<float>(totalPoints - points) / totalPoints, { 0,0 }, pb.c_str());
+				ImGui::PopStyleColor();
 			}
 			ImGui::Text("Influence: ");
 			ImGui::SameLine(spacer);
 			pb = std::to_string(influence) + " / " + std::to_string(totalInfluence);
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.46f, 0.74f, 0.84f, 1.f));
 			ImGui::ProgressBar(static_cast<float>(influence) / totalInfluence, { 0,0 }, pb.c_str());			
+			ImGui::PopStyleColor();
 			
 			if (drawFailed) ImGui::OpenPopup("Out of cards!");
 			if (ImGui::BeginPopupModal("Out of cards!", NULL, ImGuiWindowFlags_AlwaysAutoResize))
@@ -997,6 +1012,92 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 		}
 
 		// end
+		else if(guiState==GuiState::Summary)
+		{
+			ImGui::Text(deck.identity.name.c_str());
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::BeginTooltip();
+				ImGui::Image((void*)deck.identity.texId, ImVec2(300, 418));
+				ImGui::EndTooltip();
+			}
+			static bool newSortSummary = true;
+
+			size_t sortByCol[3] = { 1, 2, 0 };
+			std::string columns[3] = { "Name", "Faction", "Type"};
+
+			if (newSortSummary)
+			{
+				newSortSummary = false;
+				const std::vector<std::function<bool(const Card&, const Card&)>> sortFunc = { [](const Card& lhs, const Card& rhs) { return lhs.name < rhs.name; },
+					[](const Card& lhs, const Card& rhs) { return lhs.faction < rhs.faction; },
+					[](const Card& lhs, const Card& rhs) { return lhs.type < rhs.type; } };
+				std::sort(deck.cards.begin(), deck.cards.end(), [&sortFunc, &sortByCol](const Card& lhs, const Card& rhs) {
+					for (size_t i = 0; i < sortFunc.size(); i++) if (sortFunc[sortByCol[i]](lhs, rhs) || sortFunc[sortByCol[i]](rhs, lhs)) return sortFunc[sortByCol[i]](lhs, rhs);
+					return false;
+				} );
+			}
+
+			ImGui::Columns(3, "Summary");
+			ImGui::Separator();
+			ImGui::Button(columns[0].c_str());
+			ImGui::NextColumn();
+			ImGui::Button(columns[1].c_str());			
+			ImGui::NextColumn();
+			ImGui::Button(columns[2].c_str());			
+			ImGui::NextColumn();
+			ImGui::Separator();
+			for (size_t i = 0;i<deck.cards.size();i++)
+			{
+				auto c = deck.cards[i];
+				int count = 1;
+				while (i + 1 < deck.cards.size() && deck.cards[i].name == deck.cards[i + 1].name)
+				{
+					i++;
+					count++;
+				}
+
+				if(count > 1) ImGui::Selectable((c.name + " x" + std::to_string(count)).c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+				else ImGui::Selectable(c.name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::BeginTooltip();
+					ImGui::Image((void*)c.texId, ImVec2(300, 418));
+					ImGui::EndTooltip();
+				}
+				ImGui::NextColumn();
+				ImGui::Text(toString(c.faction).c_str()); 
+				ImGui::NextColumn();
+				ImGui::Text(c.type.c_str());
+				ImGui::NextColumn();				
+				if (i + 1 < deck.cards.size() && deck.cards[i].faction != deck.cards[i + 1].faction) ImGui::Separator();
+			}
+			ImGui::Columns(1);
+			ImGui::Separator();
+
+			static char filename[128] = "deck.txt";
+			if (ImGui::Button("Save"))
+			{
+				std::ofstream fout;
+				fout.open(filename);
+				if (!fout.good()) std::cerr << "\nCould not open file: " << filename << "\n";
+				else
+				{
+					logDeck(fout, deck);
+					fout.close();
+				}
+			}
+			ImGui::SameLine();
+			ImGui::InputText("", filename, 128);
+			if (ImGui::Button("Copy to Clipboard"))
+			{
+				std::stringstream ss;
+				logDeck(ss, deck);
+				ImGui::SetClipboardText(ss.str().c_str());
+			}
+			if (ImGui::Button("Quit")) break;
+		}
+		/*
 		else if (guiState == GuiState::Summary)
 		{
 			ImGui::Text(deck.identity.name.c_str());
@@ -1050,15 +1151,21 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 				if (!fout.good()) std::cerr << "\nCould not open file: " << filename << "\n";
 				else
 				{
-					fout << "1 " << deck.identity.name << " (" << toString(deck.identity.pack) << ", " << deck.identity.pack_number << ")\n";
-					for (auto& c : deck.cards) fout << "1 " << c.name << " (" << toString(c.pack) << ", " << c.pack_number << ")\n";
+					logDeck(fout, deck);
 					fout.close();
 				}
 			}
 			ImGui::SameLine();
 			ImGui::InputText("", filename, 128);
+			if (ImGui::Button("Copy to Clipboard"))
+			{
+				std::stringstream ss;
+				logDeck(ss, deck);				
+				ImGui::SetClipboardText(ss.str().c_str());
+			}
 			if (ImGui::Button("Quit")) break;
-		}
+		}*/
+
 		ImGui::Spacing();
 		ImGui::Text(statusLine.c_str());
 		ImGui::End();

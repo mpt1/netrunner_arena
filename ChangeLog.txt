@@ -1,5 +1,7 @@
 Build 460
-	* Progress bars
+	* Progress bars (cards, influence, agenda points)
+	* 'Copy to Clipboard' button
+	* Summary is now a sorted table 
 
 Build 459
 	* Skip downloading images of unreleased packs.
