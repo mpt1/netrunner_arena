@@ -1,3 +1,7 @@
+Build 461
+	* Cleaned up deck text dump, jinteki.net and netrunnerdb.com should parse more reliable.
+	* GUI adjustments
+
 Build 460
 	* Progress bars (cards, influence, agenda points)
 	* 'Copy to Clipboard' button

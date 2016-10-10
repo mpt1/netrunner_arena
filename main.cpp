@@ -1,5 +1,5 @@
 /* Android: Netrunner - Arena drafting */
-constexpr int BUILD_NUMBER = 460;
+constexpr int BUILD_NUMBER = 461;
 
 /* Dependency: C++ Requests
  * https://github.com/whoshuu/cpr
@@ -400,10 +400,21 @@ void build_decks()
 	}
 }
 
-void logDeck(std::ostream& fout, const Deck& deck)
+void logDeck(std::ostream& fout, Deck& deck)
 {
-	fout << "1 " << deck.identity.name << " (" << toString(deck.identity.pack) << ", " << deck.identity.pack_number << ")\n";
-	for (auto& c : deck.cards) fout << "1 " << c.name << " (" << toString(c.pack) << ", " << c.pack_number << ")\n";
+	sort(deck.cards.begin(), deck.cards.end(), [](const Card& lhs, const Card& rhs) { return lhs.name < rhs.name; });
+	fout << "1 " << deck.identity.name << "\n";
+	for (size_t i = 0;i<deck.cards.size();i++)
+	{
+		auto& c = deck.cards[i];
+		int count = 1;
+		while (i + 1 < deck.cards.size() && deck.cards[i].name == deck.cards[i + 1].name)
+		{
+			i++;
+			count++;
+		}
+		fout << count << " " << c.name << "\n";
+	}
 }
 
 // read stats from file "stats.txt". format: card id, #picked, #offered
@@ -583,6 +594,9 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 )");
 			ImGui::Text("Build %d", BUILD_NUMBER);
 
+			std::string partial = u8" \u25CB";
+			std::string full = u8" \u25CF";
+
 			static bool lowCardWarning = false;
 			if (ImGui::TreeNode("Packs"))
 			{
@@ -590,7 +604,14 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 				ImGui::RadioButton("Core", &numCore, 1); ImGui::SameLine();
 				ImGui::RadioButton("x2", &numCore, 2); ImGui::SameLine();
 				ImGui::RadioButton("x3", &numCore, 3);
-				if (ImGui::TreeNode("Genesis"))
+
+				int pcount = g_allowed_packs[Pack::WhatLiesAhead] + g_allowed_packs[Pack::TraceAmount] + g_allowed_packs[Pack::CyberExodus] + 
+					g_allowed_packs[Pack::AStudyInStatic] +	g_allowed_packs[Pack::HumanitysShadow] + g_allowed_packs[Pack::FutureProof];
+				std::string psym = (pcount == 6) ? full : ((pcount > 0) ? partial : "");
+				bool genesis = ImGui::TreeNode("Genesis");
+				ImGui::SameLine();
+				ImGui::Text(psym.c_str());
+				if (genesis)
 				{
 					ImGui::Selectable("What Lies Ahead", (bool*)(&g_allowed_packs[Pack::WhatLiesAhead]));
 					ImGui::Selectable("Trace Amount", (bool*)(&g_allowed_packs[Pack::TraceAmount]));
@@ -600,8 +621,16 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 					ImGui::Selectable("Future Proof", (bool*)(&g_allowed_packs[Pack::FutureProof]));
 					ImGui::TreePop();
 				}
+
 				ImGui::Selectable("Creation and Control", (bool*)(&g_allowed_packs[Pack::CreationAndControl]));
-				if (ImGui::TreeNode("Spin"))
+
+				pcount = g_allowed_packs[Pack::OpeningMoves] + g_allowed_packs[Pack::SecondThoughts] + g_allowed_packs[Pack::MalaTempora] +
+					g_allowed_packs[Pack::TrueColors] + g_allowed_packs[Pack::FearAndLoathing] + g_allowed_packs[Pack::DoubleTime];
+				psym = (pcount == 6) ? full : ((pcount > 0) ? partial : "");
+				bool spin = ImGui::TreeNode("Spin");
+				ImGui::SameLine();
+				ImGui::Text(psym.c_str());
+				if (spin)
 				{
 					ImGui::Selectable("Opening Moves", (bool*)(&g_allowed_packs[Pack::OpeningMoves]));
 					ImGui::Selectable("Second Thoughts", (bool*)(&g_allowed_packs[Pack::SecondThoughts]));
@@ -611,8 +640,16 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 					ImGui::Selectable("Double Time", (bool*)(&g_allowed_packs[Pack::DoubleTime]));
 					ImGui::TreePop();
 				}
+
 				ImGui::Selectable("Honor and Profit", (bool*)(&g_allowed_packs[Pack::HonorAndProfit]));
-				if (ImGui::TreeNode("Lunar"))
+
+				pcount = g_allowed_packs[Pack::Upstalk] + g_allowed_packs[Pack::TheSpacesBetween] + g_allowed_packs[Pack::FirstContact] +
+					g_allowed_packs[Pack::UpAndOver] + g_allowed_packs[Pack::AllThatRemains] + g_allowed_packs[Pack::TheSource];
+				psym = (pcount == 6) ? full : ((pcount > 0) ? partial : "");
+				bool lunar = ImGui::TreeNode("Lunar");
+				ImGui::SameLine();
+				ImGui::Text(psym.c_str());
+				if (lunar)
 				{
 					ImGui::Selectable("Upstalk", (bool*)(&g_allowed_packs[Pack::Upstalk]));
 					ImGui::Selectable("The Spaces Between", (bool*)(&g_allowed_packs[Pack::TheSpacesBetween]));
@@ -622,8 +659,16 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 					ImGui::Selectable("The Source", (bool*)(&g_allowed_packs[Pack::TheSource]));
 					ImGui::TreePop();
 				}
+
 				ImGui::Selectable("Order and Chaos", (bool*)(&g_allowed_packs[Pack::OrderAndChaos]));
-				if (ImGui::TreeNode("SanSan"))
+
+				pcount = g_allowed_packs[Pack::TheValley] + g_allowed_packs[Pack::BreakerBay] + g_allowed_packs[Pack::ChromeCity] +
+					g_allowed_packs[Pack::TheUnderway] + g_allowed_packs[Pack::OldHollywood] + g_allowed_packs[Pack::TheUniverseOfTomorrow];
+				psym = (pcount == 6) ? full : ((pcount > 0) ? partial : "");
+				bool sansan = ImGui::TreeNode("SanSan");
+				ImGui::SameLine();
+				ImGui::Text(psym.c_str());
+				if (sansan)
 				{
 					ImGui::Selectable("The Valley", (bool*)(&g_allowed_packs[Pack::TheValley]));
 					ImGui::Selectable("Breaker Bay", (bool*)(&g_allowed_packs[Pack::BreakerBay]));
@@ -633,8 +678,16 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 					ImGui::Selectable("The Universe of Tomorrow", (bool*)(&g_allowed_packs[Pack::TheUniverseOfTomorrow]));
 					ImGui::TreePop();
 				}
+
 				ImGui::Selectable("Data and Destiny", (bool*)(&g_allowed_packs[Pack::DataAndDestiny]));
-				if (ImGui::TreeNode("Mumbad"))
+
+				pcount = g_allowed_packs[Pack::KalaGhoda] + g_allowed_packs[Pack::BusinessFirst] + g_allowed_packs[Pack::DemocracyAndDogma] +
+					g_allowed_packs[Pack::SalsetteIsland] + g_allowed_packs[Pack::TheLiberatedMind] + g_allowed_packs[Pack::FearTheMasses];
+				psym = (pcount == 6) ? full : ((pcount > 0) ? partial : "");
+				bool mumbad = ImGui::TreeNode("Mumbad");
+				ImGui::SameLine();
+				ImGui::Text(psym.c_str());
+				if (mumbad)
 				{
 					ImGui::Selectable("Kala Ghoda", (bool*)(&g_allowed_packs[Pack::KalaGhoda]));
 					ImGui::Selectable("Business First", (bool*)(&g_allowed_packs[Pack::BusinessFirst]));
@@ -644,7 +697,13 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 					ImGui::Selectable("Fear the Masses", (bool*)(&g_allowed_packs[Pack::FearTheMasses]));
 					ImGui::TreePop();
 				}
-				if (ImGui::TreeNode("Flashpoint"))
+
+				pcount = g_allowed_packs[Pack::Seconds] + g_allowed_packs[Pack::BloodMoney];
+				psym = (pcount == 6) ? full : ((pcount > 0) ? partial : "");
+				bool flashpoint = ImGui::TreeNode("Flashpoint");
+				ImGui::SameLine();
+				ImGui::Text(psym.c_str());
+				if (flashpoint)
 				{
 					ImGui::Selectable("23 Seconds", (bool*)(&g_allowed_packs[Pack::Seconds]));
 					ImGui::Selectable("Blood Money", (bool*)(&g_allowed_packs[Pack::BloodMoney]));
@@ -655,11 +714,17 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 			}
 			if (ImGui::TreeNode("Options"))
 			{
-				ImGui::Selectable("Allow duplicates in selection", &opt_allowDuplicates);
+				ImGui::Checkbox("Allow duplicates in selection", &opt_allowDuplicates);
+				ImGui::Separator();
 				ImGui::RadioButton("Normal", &opt_influence, OPT_NORMAL); ImGui::SameLine();
 				ImGui::RadioButton("At least one zero influence card in selection", &opt_influence, OPT_DISALLOW3INF); ImGui::SameLine();
 				ImGui::RadioButton("Influence has no meaning", &opt_influence, OPT_NOINF);
-				ImGui::InputInt("Draft more than minimum deck size.", &opt_plusCards, 1, 5);
+				ImGui::Separator();
+				ImGui::Text("Draft ");
+				ImGui::SameLine();
+				ImGui::PushItemWidth(100.f);
+				ImGui::InputInt(" more Cards than minimum deck size.", &opt_plusCards, 1, 5);
+				ImGui::PopItemWidth();
 				opt_plusCards = std::max(std::min(opt_plusCards, 20), 0);
 				ImGui::TreePop();
 			}
@@ -1097,75 +1162,7 @@ Build a deck by repeatedly choosing 1 out of 3 cards.
 			}
 			if (ImGui::Button("Quit")) break;
 		}
-		/*
-		else if (guiState == GuiState::Summary)
-		{
-			ImGui::Text(deck.identity.name.c_str());
-			if (ImGui::IsItemHovered())
-			{
-				ImGui::BeginTooltip();
-				ImGui::Image((void*)deck.identity.texId, ImVec2(300, 418));
-				ImGui::EndTooltip();
-			}
-			std::sort(deck.cards.begin(), deck.cards.end(), [](Card& l, Card& r) { if (l.faction == r.faction) return l.name < r.name; return l.faction < r.faction; });
-			size_t i = 0;
-			while (i < deck.cards.size())
-			{
-				Faction fact = deck.cards[i].faction;
-				int fcount = 0;
-				size_t j = i;
-				while (j < deck.cards.size() && fact == deck.cards[j].faction)
-				{
-					fcount++;
-					j++;
-				}
-				if (ImGui::TreeNode(toString(deck.cards[i].faction).c_str(), "%s x%d", toString(deck.cards[i].faction).c_str(), fcount))
-				{
-					while (i < deck.cards.size() && fact == deck.cards[i].faction)
-					{
-						int count = 1;
-						while (i + 1 < deck.cards.size() && deck.cards[i].name == deck.cards[i + 1].name)
-						{
-							i++;
-							count++;
-						}
-						if (count > 1) ImGui::Text("%s x%d", deck.cards[i].name.c_str(), count);
-						else ImGui::Text(deck.cards[i].name.c_str());
-						if (ImGui::IsItemHovered())
-						{
-							ImGui::BeginTooltip();
-							ImGui::Image((void*)deck.cards[i].texId, ImVec2(300, 418));
-							ImGui::EndTooltip();
-						}
-						i++;
-					}
-					ImGui::TreePop();
-				}
-				else while (i < deck.cards.size() && fact == deck.cards[i].faction) i++;
-			}
-			static char filename[128] = "deck.txt";
-			if (ImGui::Button("Save"))
-			{
-				std::ofstream fout;
-				fout.open(filename);
-				if (!fout.good()) std::cerr << "\nCould not open file: " << filename << "\n";
-				else
-				{
-					logDeck(fout, deck);
-					fout.close();
-				}
-			}
-			ImGui::SameLine();
-			ImGui::InputText("", filename, 128);
-			if (ImGui::Button("Copy to Clipboard"))
-			{
-				std::stringstream ss;
-				logDeck(ss, deck);				
-				ImGui::SetClipboardText(ss.str().c_str());
-			}
-			if (ImGui::Button("Quit")) break;
-		}*/
-
+		
 		ImGui::Spacing();
 		ImGui::Text(statusLine.c_str());
 		ImGui::End();
